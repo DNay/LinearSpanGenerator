@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -148,14 +149,30 @@ namespace LinearSpanGenerator
                 path = args[0];
 
             var result = new List<Word>();
-            string[] text;
+            ICollection<string> text;
 
             using (var f = File.OpenText(path))
             {
                 text = f.ReadToEnd().Split(' ', '\n');
             }
 
-            result.AddRange(text.Select(s => new Word(s)));
+            var zeroStr = text.FirstOrDefault(s => s.StartsWith("#"));
+            ICollection<int> zeros = null;
+            if (zeroStr != null)
+            {
+                try
+                {
+                    zeros = zeroStr.Replace("#", "").Split(' ').Select(s => int.Parse(s)).ToList();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+            }
+            
+            var numbers = text.Where(s => !s.StartsWith("#")).ToList();
+
+            result.AddRange(numbers.Select(s => new Word(s)));
             result = result.Distinct().ToList();
 
             var unsummed = result.ToList();
@@ -175,10 +192,13 @@ namespace LinearSpanGenerator
                 result = result.Distinct().ToList();
             }
 
-            var ts = result.Select(r => r.ToString()).ToList();
+            var ts = result.Select(r => r.ToString()).Where(s => !string.IsNullOrEmpty(s)).ToList();
             ts.Sort();
 
+            var suitable = ts.Count(s => zeros == null || !zeros.Any() || zeros.All(i => s.Length < i || s[i - 1] == '0'));
+
             StringBuilder str = new StringBuilder();
+            str.AppendLine(suitable.ToString());
             foreach (var t in ts)
             {
                 str.AppendLine(t);
